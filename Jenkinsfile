@@ -23,30 +23,14 @@ pipeline {
                     } else if (params.ACTION == 'restart') {
                         sh '''
                             echo "🔄 Restarting application..."
-                            pkill -f "node server.js" || echo "No process found"
-                            sleep 2
-                            nohup node server.js > /var/log/jenkins/app.log 2>&1 &
-                            sleep 3
-                            curl -f http://localhost:3000 || exit 1
-                            echo "✅ Application restarted successfully"
+                            /home/kaliya/Server/jenkins/transaction-analytics-dashboard/start-app.sh
                         '''
                     } else if (params.ACTION == 'deploy') {
                         sh '''
                             echo "🚀 Deploying application..."
-                            # Install dependencies
+                            cd /home/kaliya/Server/jenkins/transaction-analytics-dashboard
                             npm install
-                            
-                            # Stop existing process
-                            pkill -f "node server.js" || echo "No process found"
-                            sleep 2
-                            
-                            # Start new process
-                            nohup node server.js > /var/log/jenkins/app.log 2>&1 &
-                            sleep 3
-                            
-                            # Verify it's running
-                            curl -f http://localhost:3000 || exit 1
-                            echo "✅ Application deployed successfully"
+                            /home/kaliya/Server/jenkins/transaction-analytics-dashboard/start-app.sh
                         '''
                     }
                 }
