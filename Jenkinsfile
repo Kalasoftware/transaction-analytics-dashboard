@@ -34,9 +34,13 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                    pm2 stop transaction-dashboard || true
-                    pm2 start server.js --name transaction-dashboard
-                    pm2 save
+                    # Kill any existing process on port 3000
+                    pkill -f "node server.js" || true
+                    # Start the server in background
+                    nohup node server.js > /var/log/jenkins/app.log 2>&1 &
+                    sleep 2
+                    # Verify it's running
+                    curl -f http://localhost:3000 || exit 1
                 '''
             }
         }
