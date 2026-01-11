@@ -16,35 +16,49 @@ pipeline {
     
     stages {
         stage('Checkout') {
-            when { params.ACTION != 'stop' }
+            when {
+                not { params.ACTION == 'stop' }
+            }
             steps {
                 checkout scm
             }
         }
         
         stage('Install Dependencies') {
-            when { params.ACTION == 'deploy' }
+            when {
+                params.ACTION == 'deploy'
+            }
             steps {
                 sh 'npm install'
             }
         }
         
         stage('Test') {
-            when { params.ACTION == 'deploy' }
+            when {
+                params.ACTION == 'deploy'
+            }
             steps {
                 sh 'npm test || echo "No tests configured"'
             }
         }
         
         stage('Build') {
-            when { params.ACTION == 'deploy' }
+            when {
+                params.ACTION == 'deploy'
+            }
             steps {
                 sh 'echo "Build completed"'
             }
         }
         
         stage('Stop Application') {
-            when { params.ACTION in ['stop', 'restart', 'deploy'] }
+            when {
+                anyOf {
+                    params.ACTION == 'stop'
+                    params.ACTION == 'restart'
+                    params.ACTION == 'deploy'
+                }
+            }
             steps {
                 sh '''
                     echo "Stopping application..."
@@ -54,8 +68,13 @@ pipeline {
             }
         }
         
-        stage('Deploy') {
-            when { params.ACTION in ['deploy', 'restart'] }
+        stage('Start Application') {
+            when {
+                anyOf {
+                    params.ACTION == 'deploy'
+                    params.ACTION == 'restart'
+                }
+            }
             steps {
                 sh '''
                     # Start the server in background
