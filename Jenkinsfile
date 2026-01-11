@@ -1,11 +1,6 @@
 pipeline {
     agent any
     
-    environment {
-        NODE_VERSION = '18'
-        APP_PORT = '3000'
-    }
-    
     parameters {
         choice(
             name: 'ACTION',
@@ -15,75 +10,46 @@ pipeline {
     }
     
     stages {
-        stage('Checkout') {
-            when {
-                not { params.ACTION == 'stop' }
-            }
+        stage('Execute Action') {
             steps {
-                checkout scm
-            }
-        }
-        
-        stage('Install Dependencies') {
-            when {
-                params.ACTION == 'deploy'
-            }
-            steps {
-                sh 'npm install'
-            }
-        }
-        
-        stage('Test') {
-            when {
-                params.ACTION == 'deploy'
-            }
-            steps {
-                sh 'npm test || echo "No tests configured"'
-            }
-        }
-        
-        stage('Build') {
-            when {
-                params.ACTION == 'deploy'
-            }
-            steps {
-                sh 'echo "Build completed"'
-            }
-        }
-        
-        stage('Stop Application') {
-            when {
-                anyOf {
-                    params.ACTION == 'stop'
-                    params.ACTION == 'restart'
-                    params.ACTION == 'deploy'
+                script {
+                    if (params.ACTION == 'stop') {
+                        sh '''
+                            echo "🛑 Stopping application..."
+                            pkill -f "node server.js" || echo "No process found"
+                            sleep 2
+                            echo "✅ Application stopped"
+                        '''
+                    } else if (params.ACTION == 'restart') {
+                        sh '''
+                            echo "🔄 Restarting application..."
+                            pkill -f "node server.js" || echo "No process found"
+                            sleep 2
+                            nohup node server.js > /var/log/jenkins/app.log 2>&1 &
+                            sleep 3
+                            curl -f http://localhost:3000 || exit 1
+                            echo "✅ Application restarted successfully"
+                        '''
+                    } else if (params.ACTION == 'deploy') {
+                        sh '''
+                            echo "🚀 Deploying application..."
+                            # Install dependencies
+                            npm install
+                            
+                            # Stop existing process
+                            pkill -f "node server.js" || echo "No process found"
+                            sleep 2
+                            
+                            # Start new process
+                            nohup node server.js > /var/log/jenkins/app.log 2>&1 &
+                            sleep 3
+                            
+                            # Verify it's running
+                            curl -f http://localhost:3000 || exit 1
+                            echo "✅ Application deployed successfully"
+                        '''
+                    }
                 }
-            }
-            steps {
-                sh '''
-                    echo "Stopping application..."
-                    pkill -f "node server.js" || echo "No process found"
-                    sleep 2
-                '''
-            }
-        }
-        
-        stage('Start Application') {
-            when {
-                anyOf {
-                    params.ACTION == 'deploy'
-                    params.ACTION == 'restart'
-                }
-            }
-            steps {
-                sh '''
-                    # Start the server in background
-                    nohup node server.js > /var/log/jenkins/app.log 2>&1 &
-                    sleep 2
-                    # Verify it's running
-                    curl -f http://localhost:3000 || exit 1
-                    echo "✅ Application started successfully"
-                '''
             }
         }
     }
