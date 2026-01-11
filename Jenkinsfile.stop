@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Stop Application') {
+            steps {
+                sh '''
+                    echo "Stopping transaction-analytics application..."
+                    # Kill the Node.js process
+                    pkill -f "node server.js" || echo "No process found"
+                    
+                    # Verify it's stopped
+                    sleep 2
+                    if pgrep -f "node server.js" > /dev/null; then
+                        echo "❌ Application still running"
+                        exit 1
+                    else
+                        echo "✅ Application stopped successfully"
+                    fi
+                '''
+            }
+        }
+    }
+}
